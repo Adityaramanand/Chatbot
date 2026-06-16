@@ -1,0 +1,16 @@
+langchain
+sentence-transformers
+faiss-cpu
+pypdf
+langchain-community
+langchain-text-splitters
+faster-whisper
+pillow
+google-generativeai
+langchain-huggingface
+pyannote.audio
+# torch torchvision torchaudio
+
+pydub
+pyannote.audio  Pipeline
+pydub AudioSegment

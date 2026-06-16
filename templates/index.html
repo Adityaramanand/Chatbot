@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <title>Gemini RAG Chatbot</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            min-height: 100vh;
+
+            background: linear-gradient(135deg,
+                    #f8fafc,
+                    #e0f2fe,
+                    #dbeafe);
+        }
+
+        #chatBox {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            background: #f8fafc;
+        }
+
+        .message {
+            max-width: 85%;
+            padding: 15px;
+            border-radius: 15px;
+            line-height: 1.5;
+            word-wrap: break-word;
+        }
+
+        .user {
+            align-self: flex-end;
+            background: #0d6efd;
+            color: white;
+        }
+
+        .bot {
+            align-self: flex-start;
+            background: #e2e8f0;
+            color: #1e293b;
+        }
+
+        .card {
+            height: 90vh;
+            border-radius: 25px;
+            background: white;
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.12);
+        }
+
+        .card-header {
+            font-size: 1.3rem;
+        }
+
+        #userInput {
+            background: #2b3035;
+            color: white;
+            border: none;
+        }
+
+        #userInput:focus {
+            background: #2b3035;
+            color: white;
+            box-shadow: none;
+        }
+
+        .btn {
+            white-space: nowrap;
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #212529;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #495057;
+            border-radius: 10px;
+        }
+
+        .chat-input-bar {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+
+            background: white;
+
+            border: 2px solid #dbeafe;
+
+            border-radius: 50px;
+
+            padding: 10px 15px;
+        }
+
+        .chat-input {
+            background: transparent !important;
+            border: none !important;
+            color: #1e293b !important;
+            box-shadow: none !important;
+        }
+
+        .chat-input::placeholder {
+            color: #64748b;
+        }
+
+        .icon-btn {
+            width: 42px;
+            height: 42px;
+
+            border: none;
+
+            border-radius: 50%;
+
+            background: #eff6ff;
+
+            color: #2563eb;
+
+            font-size: 18px;
+
+            cursor: pointer;
+
+            transition: 0.3s;
+        }
+
+        .icon-btn:hover {
+            background: #dbeafe;
+        }
+
+        .send-btn {
+            border-radius: 50%;
+            width: 45px;
+            height: 45px;
+            padding: 0;
+            font-size: 18px;
+        }
+
+        .transcript-box {
+            background: white;
+            border-radius: 12px;
+            padding: 15px;
+        }
+
+        .transcript-box pre {
+            white-space: pre-wrap;
+            word-break: break-word;
+            font-size: 15px;
+            margin: 0;
+        }
+
+        .summary-box {
+            background: white;
+            border-radius: 12px;
+            padding: 15px;
+        }
+    </style>
+
+</head>
+
+<body>
+
+    <div class="container py-4">
+
+        <div class="card shadow-lg border-0">
+
+
+            <div class="card-header bg-primary text-white text-center fs-4 fw-bold">
+                Gemini RAG Chatbot 🤖
+            </div>
+
+            <div class="card-body overflow-auto" id="chatBox">
+
+                <div class="message bot">
+                    Hello 👋 <br><br>
+                    How can I help you today?
+                </div>
+
+            </div>
+
+            <div class="card-footer">
+
+                <div class="chat-input-bar">
+
+                    <input type="file" id="fileInput" accept="image/*,.pdf,.mp3,.wav,.m4a" hidden
+                        onchange="handleFile()">
+
+                    <button class="icon-btn" onclick="document.getElementById('fileInput').click()" title="Upload File">
+
+                        📎
+
+                    </button>
+
+                    <input type="text" id="userInput" class="form-control chat-input" placeholder="Ask anything...">
+
+
+
+                    <button class="icon-btn" id="recordBtn" onclick="toggleRecording()">
+
+                        🎤
+
+                    </button>
+
+                    <button class="btn btn-primary send-btn" onclick="sendMessage()">
+
+                        ➤
+
+                    </button>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <script>
+
+            async function handleFile() {
+
+                const file =
+                    document.getElementById(
+                        "fileInput"
+                    ).files[0];
+
+                if (!file) return;
+
+                if (
+                    file.type.startsWith("image/")
+                ) {
+
+                    sendImage(file);
+
+                }
+                else if (
+                    file.type === "application/pdf"
+                ) {
+
+                    uploadPDF(file);
+
+                }
+                else if (
+                    file.type.startsWith("audio/")
+                ) {
+
+                    uploadAudio(file);
+                }
+
+                document.getElementById(
+                    "fileInput"
+                ).value = "";
+            }
+            async function sendImage(imageFile) {
+
+                // const imageFile =
+                //     document.getElementById(
+                //         "imageInput"
+                //     ).files[0];
+
+                // if (!imageFile) {
+
+                //     alert(
+                //         "Please select an image"
+                //     );
+
+                //     return;
+                // }
+
+                const question =
+                    document.getElementById(
+                        "userInput"
+                    ).value ||
+                    "Explain this image";
+
+                const formData =
+                    new FormData();
+
+                formData.append(
+                    "image",
+                    imageFile
+                );
+
+                formData.append(
+                    "question",
+                    question
+                );
+
+                addMessage(
+                    `📷 ${imageFile.name}`,
+                    "user"
+                );
+
+                addMessage(
+                    "Analyzing image...",
+                    "bot"
+                );
+
+                try {
+
+                    const response =
+                        await fetch(
+                            "/image-chat",
+                            {
+                                method: "POST",
+                                body: formData
+                            }
+                        );
+
+                    const data =
+                        await response.json();
+
+                    const botMessages =
+                        document.querySelectorAll(
+                            ".bot"
+                        );
+
+                    botMessages[
+                        botMessages.length - 1
+                    ].remove();
+
+                    addMessage(
+                        data.response,
+                        "bot"
+                    );
+
+                }
+                catch (error) {
+
+                    console.log(error);
+
+                    addMessage(
+                        "Image processing failed.",
+                        "bot"
+                    );
+                }
+            }
+            async function uploadPDF(pdfFile) {
+
+                const formData =
+                    new FormData();
+
+                formData.append(
+                    "pdf",
+                    pdfFile
+                );
+
+                addMessage(
+                    `📄 ${pdfFile.name}`,
+                    "user"
+                );
+
+                addMessage(
+                    "Processing PDF...",
+                    "bot"
+                );
+
+                try {
+
+                    const response =
+                        await fetch(
+                            "/upload-pdf",
+                            {
+                                method: "POST",
+                                body: formData
+                            }
+                        );
+
+                    const data =
+                        await response.json();
+
+                    const botMessages =
+                        document.querySelectorAll(
+                            ".bot"
+                        );
+
+                    botMessages[
+                        botMessages.length - 1
+                    ].remove();
+
+                    addMessage(
+                        data.message,
+                        "bot"
+                    );
+
+                }
+                catch (error) {
+
+                    console.log(error);
+
+                    addMessage(
+                        "PDF upload failed.",
+                        "bot"
+                    );
+                }
+            }
+            async function uploadAudio(audioFile) {
+
+                const formData = new FormData();
+
+                formData.append(
+                    "audio",
+                    audioFile
+                );
+
+                addMessage(
+                    `🎵 ${audioFile.name}`,
+                    "user"
+                );
+
+                addMessage(
+                    "Analyzing conversation...",
+                    "bot"
+                );
+
+                try {
+
+                    const response =
+                        await fetch(
+                            "/upload-audio",
+                            {
+                                method: "POST",
+                                body: formData
+                            }
+                        );
+
+                    const data =
+                        await response.json();
+
+                    const botMessages =
+                        document.querySelectorAll(
+                            ".bot"
+                        );
+
+                    botMessages[
+                        botMessages.length - 1
+                    ].remove();
+
+                    addMessage(
+                        `
+<div class="transcript-box">
+<h5>📝 Transcript</h5>
+<pre style="white-space: pre-wrap;">
+${data.dialogue}
+</pre>
+</div>
+`,
+                        "bot"
+                    );
+
+                    addMessage(
+                        `
+<div class="summary-box">
+<h5>📋 Conversation Summary</h5>
+${data.summary}
+</div>
+`,
+                        "bot"
+                    );
+
+                }
+                catch (error) {
+
+                    console.log(error);
+
+                    addMessage(
+                        "Audio processing failed.",
+                        "bot"
+                    );
+                }
+            }
+            const chatBox =
+                document.getElementById("chatBox");
+
+            function addMessage(message, className) {
+
+                const div = document.createElement("div");
+
+                div.classList.add("message");
+                div.classList.add(className);
+
+                if (className === "bot") {
+                    div.innerHTML = marked.parse(message);
+                }
+                else {
+                    div.textContent = message;
+                }
+
+                chatBox.appendChild(div);
+
+                chatBox.scrollTop = chatBox.scrollHeight;
+            }
+
+            /* =====================================
+               ENTER KEY SUPPORT
+            ===================================== */
+
+            document
+                .getElementById("userInput")
+                .addEventListener(
+                    "keypress",
+                    function (event) {
+
+                        if (event.key === "Enter") {
+
+                            sendMessage();
+                        }
+                    }
+                );
+            /* =====================================
+               SESSION MANAGEMENT
+            ===================================== */
+
+            let sessionId =
+                localStorage.getItem(
+                    "session_id"
+                );
+
+            if (!sessionId) {
+
+                sessionId =
+                    crypto.randomUUID();
+
+                localStorage.setItem(
+                    "session_id",
+                    sessionId
+                );
+            }
+
+            console.log(
+                "Session ID:",
+                sessionId
+            );
+            /* =====================================
+               NORMAL CHAT
+            ===================================== */
+
+            async function sendMessage() {
+
+                const input =
+                    document.getElementById("userInput");
+
+                const userText =
+                    input.value.trim();
+
+                if (userText === "") {
+                    return;
+                }
+
+                addMessage(userText, "user");
+
+                input.value = "";
+
+                addMessage("Thinking...", "bot");
+
+                try {
+
+                    const response =
+                        await fetch(
+                            "/chat",
+                            {
+                                method: "POST",
+
+                                headers: {
+                                    "Content-Type":
+                                        "application/json"
+                                },
+
+                                body: JSON.stringify({
+                                    message: userText,
+                                    session_id: sessionId
+                                })
+                            }
+                        );
+
+                    const data =
+                        await response.json();
+
+                    const botMessages =
+                        document.querySelectorAll(".bot");
+
+                    botMessages[
+                        botMessages.length - 1
+                    ].remove();
+
+                    addMessage(
+                        data.response,
+                        "bot"
+                    );
+
+                }
+                catch (error) {
+
+                    console.log(error);
+
+                    addMessage(
+                        "Backend connection error.",
+                        "bot"
+                    );
+                }
+            }
+
+            /* =====================================
+               VOICE RECORDING
+            ===================================== */
+
+            let mediaRecorder;
+
+            let audioChunks = [];
+
+            let isRecording = false;
+
+            async function toggleRecording() {
+
+                if (!isRecording) {
+
+                    startRecording();
+
+                } else {
+
+                    stopRecording();
+                }
+            }
+
+            async function startRecording() {
+
+                try {
+
+                    const stream =
+                        await navigator.mediaDevices.getUserMedia({
+                            audio: true
+                        });
+
+                    mediaRecorder =
+                        new MediaRecorder(stream);
+
+                    audioChunks = [];
+
+                    mediaRecorder.ondataavailable =
+                        event => {
+
+                            audioChunks.push(
+                                event.data
+                            );
+                        };
+
+                    mediaRecorder.onstop =
+                        async () => {
+
+                            addMessage(
+                                "🎤 Converting speech to text...",
+                                "bot"
+                            );
+
+                            const audioBlob =
+                                new Blob(
+                                    audioChunks,
+                                    {
+                                        type: "audio/webm"
+                                    }
+                                );
+
+                            const formData =
+                                new FormData();
+
+                            formData.append(
+                                "audio",
+                                audioBlob,
+                                "voice.webm"
+                            );
+
+                            try {
+
+                                const response =
+                                    await fetch(
+                                        "/transcribe",
+                                        {
+                                            method: "POST",
+                                            body: formData
+                                        }
+                                    );
+
+                                const data =
+                                    await response.json();
+
+                                if (data.text) {
+
+                                    document.getElementById(
+                                        "userInput"
+                                    ).value =
+                                        data.text;
+
+                                    sendMessage();
+                                }
+                                else {
+
+                                    addMessage(
+                                        "No speech detected.",
+                                        "bot"
+                                    );
+                                }
+
+                            }
+                            catch (error) {
+
+                                console.log(error);
+
+                                addMessage(
+                                    "Voice processing failed.",
+                                    "bot"
+                                );
+                            }
+                        };
+
+                    mediaRecorder.start();
+
+                    isRecording = true;
+
+                    document.getElementById(
+                        "recordBtn"
+                    ).innerText =
+                        "🔴";
+
+                    addMessage(
+                        "🎙 Recording...",
+                        "bot"
+                    );
+
+                }
+                catch (error) {
+
+                    console.log(error);
+
+                    alert(
+                        "Microphone permission denied."
+                    );
+                }
+            }
+
+            function stopRecording() {
+
+                mediaRecorder.stop();
+
+                isRecording = false;
+
+                document.getElementById(
+                    "recordBtn"
+                ).innerText =
+                    "🎤";
+                addMessage(
+                    "Recording stopped.",
+                    "bot"
+                );
+            }
+
+        </script>
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+
+</html>

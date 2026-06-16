@@ -1,0 +1,25 @@
+.env
+
+__pycache__/
+*.pyc
+
+rag_env/
+venv/
+.venv/
+
+static/audio/*
+static/images/*
+static/pdfs/*
+
+sessions.json
+
+.faiss
+index.faiss
+
+# Local vector store and chat history
+vectorstore/
+chat_history.json
+
+# Editor and IDE
+.vscode/
+.idea/
